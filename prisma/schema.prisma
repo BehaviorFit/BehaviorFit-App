@@ -1,0 +1,70 @@
+// BehaviorFit Database Schema
+// Each "model" is a table in the database.
+// To add a new field, add a line and run: npx prisma migrate dev
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Your clients
+model Client {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  fitnessData FitnessData[]
+  lifts       Lift[]
+  biometrics  Biometrics[]
+}
+
+// Daily fitness data from Apple Watch
+model FitnessData {
+  id              Int      @id @default(autoincrement())
+  date            DateTime
+  steps           Int?     // Daily step count
+  exerciseMinutes Int?     // Active exercise minutes
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  client   Client @relation(fields: [clientId], references: [id])
+  clientId Int
+}
+
+// Strength training lifts
+model Lift {
+  id        Int      @id @default(autoincrement())
+  date      DateTime
+  exercise  String   // e.g. "Squat", "Bench Press"
+  sets      Int?
+  reps      Int?
+  weight    Float?
+  unit      String   @default("lbs") // "lbs" or "kg"
+  notes     String?
+  createdAt DateTime @default(now())
+
+  client   Client @relation(fields: [clientId], references: [id])
+  clientId Int
+}
+
+// Body measurements and biometrics
+model Biometrics {
+  id             Int      @id @default(autoincrement())
+  date           DateTime
+  bodyWeight     Float?
+  bodyWeightUnit String   @default("lbs")
+  bodyFatPercent Float?
+  waistInches    Float?
+  hipsInches     Float?
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  client   Client @relation(fields: [clientId], references: [id])
+  clientId Int
+}
