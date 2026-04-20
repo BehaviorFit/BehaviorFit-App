@@ -19,6 +19,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Link href="/clients" className="hover:underline">
             Clients
           </Link>
+          <Link href="/health" className="hover:underline">
+            Health
+          </Link>
         </nav>
         <main className="max-w-4xl mx-auto px-4 py-8">{children}</main>
       </body>

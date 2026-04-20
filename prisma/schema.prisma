@@ -68,3 +68,28 @@ model Biometrics {
   client   Client @relation(fields: [clientId], references: [id])
   clientId Int
 }
+
+// Apple Health auto-sync: one row per day, upserted by the iOS Shortcut
+model AppleHealthEntry {
+  id               Int      @id @default(autoincrement())
+  date             String   @unique // "YYYY-MM-DD" key
+  steps            Int?
+  activeCalories   Float?
+  exerciseMinutes  Int?
+  standHours       Int?
+  restingHeartRate Float?
+  avgHeartRate     Float?
+  flightsClimbed   Int?
+  distanceMiles    Float?
+  sleepHours       Float?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// API token used to authenticate the iOS Shortcut
+model ApiToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  label     String   @default("Apple Health Shortcut")
+  createdAt DateTime @default(now())
+}
