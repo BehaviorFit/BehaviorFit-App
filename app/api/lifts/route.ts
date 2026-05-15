@@ -1,5 +1,6 @@
 // API: POST a new lift entry
 import { prisma } from "@/lib/prisma";
+import { appendLift } from "@/lib/sheets";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -16,6 +17,16 @@ export async function POST(req: Request) {
       notes: body.notes || null,
     },
   });
+
+  const client = await prisma.client.findUnique({
+    where: { id: lift.clientId },
+    select: { name: true },
+  });
+
+  appendLift({ ...lift, clientName: client?.name ?? "" }).catch((err) =>
+    console.error("Google Sheets sync failed (lifts):", err)
+  );
+
   return NextResponse.json(lift);
 }
 

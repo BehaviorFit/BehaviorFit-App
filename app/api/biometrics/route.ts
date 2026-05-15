@@ -1,5 +1,6 @@
 // API: POST a new biometrics entry
 import { prisma } from "@/lib/prisma";
+import { appendBiometrics } from "@/lib/sheets";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -16,6 +17,16 @@ export async function POST(req: Request) {
       notes: body.notes || null,
     },
   });
+
+  const client = await prisma.client.findUnique({
+    where: { id: entry.clientId },
+    select: { name: true },
+  });
+
+  appendBiometrics({ ...entry, clientName: client?.name ?? "" }).catch((err) =>
+    console.error("Google Sheets sync failed (biometrics):", err)
+  );
+
   return NextResponse.json(entry);
 }
 

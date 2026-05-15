@@ -1,5 +1,6 @@
 // API: POST a new fitness data entry (Apple Watch: steps, exercise minutes)
 import { prisma } from "@/lib/prisma";
+import { appendFitnessData } from "@/lib/sheets";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -13,6 +14,16 @@ export async function POST(req: Request) {
       notes: body.notes || null,
     },
   });
+
+  const client = await prisma.client.findUnique({
+    where: { id: entry.clientId },
+    select: { name: true },
+  });
+
+  appendFitnessData({ ...entry, clientName: client?.name ?? "" }).catch((err) =>
+    console.error("Google Sheets sync failed (fitness):", err)
+  );
+
   return NextResponse.json(entry);
 }
 
