@@ -53,6 +53,14 @@ model Lift {
   clientId Int
 }
 
+// Latest heart rate reading relayed from a phone-side HealthKit export
+// (e.g. the Health Auto Export app), so the live treadmill display can poll it.
+model HeartRateReading {
+  id         Int      @id @default(autoincrement())
+  bpm        Int
+  recordedAt DateTime @default(now())
+}
+
 // Body measurements and biometrics
 model Biometrics {
   id             Int      @id @default(autoincrement())

@@ -61,6 +61,13 @@ export default function TreadmillPage() {
   const [clientId, setClientId] = useState<string>("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
 
+  // Live heart rate relayed from a phone-side HealthKit export (see /api/heartrate) —
+  // Safari itself can't read the Watch directly. Falls back to manual entry
+  // whenever no reading has arrived recently.
+  const [hrReading, setHrReading] = useState<{ bpm: number; recordedAt: string } | null>(null);
+  const [hrIsLive, setHrIsLive] = useState(false);
+  const [manualBpm, setManualBpm] = useState("");
+
   const runningRef = useRef(running);
   const speedRef = useRef(speedMph);
   const inclineRef = useRef(inclinePct);
@@ -95,6 +102,32 @@ export default function TreadmillPage() {
 
   useEffect(() => {
     fetch("/api/clients").then((r) => r.json()).then(setClients);
+  }, []);
+
+  // Poll for a fresh Watch heart rate reading every few seconds
+  useEffect(() => {
+    let cancelled = false;
+    async function poll() {
+      try {
+        const res = await fetch("/api/heartrate", { cache: "no-store" });
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.bpm !== null) {
+          setHrReading({ bpm: data.bpm, recordedAt: data.recordedAt });
+          setHrIsLive(Date.now() - new Date(data.recordedAt).getTime() < 20_000);
+        } else {
+          setHrIsLive(false);
+        }
+      } catch {
+        // network hiccup; keep showing the last known reading until the next poll
+      }
+    }
+    poll();
+    const id = setInterval(poll, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, []);
 
   // Live tick: integrates elapsed time / distance / calories off the wall clock,
@@ -171,13 +204,14 @@ export default function TreadmillPage() {
         exerciseMinutes: Math.round(elapsedSec / 60),
         notes: `Treadmill: ${distanceMi.toFixed(2)} mi @ ${speedMph} mph, ${inclinePct}% incline, ~${Math.round(
           calorieKcal
-        )} kcal`,
+        )} kcal${displayedBpm ? `, ${displayedBpm} bpm` : ""}`,
       }),
     });
     setSaveStatus("saved");
   }
 
   const steps = Math.round((distanceMi * 5280) / STRIDE_FEET);
+  const displayedBpm = hrIsLive && hrReading ? hrReading.bpm : manualBpm ? Number(manualBpm) : null;
 
   return (
     <div className="-mx-4 -my-8 min-h-[calc(100vh-73px)] bg-slate-900 text-white px-4 py-8 rounded-none sm:rounded-2xl sm:mx-0">
@@ -199,6 +233,36 @@ export default function TreadmillPage() {
             {formatTime(elapsedSec)}
           </div>
           <div className="text-slate-400 mt-1">elapsed time</div>
+        </div>
+
+        {/* Heart rate: live from a phone-side HealthKit export when available, manual otherwise */}
+        <div className="bg-slate-800 rounded-xl px-5 py-4 mb-8 flex items-center justify-center gap-4">
+          <span className="text-slate-400 text-xs uppercase tracking-wide">Heart Rate</span>
+          {hrIsLive && hrReading ? (
+            <span className="text-4xl font-bold tabular-nums text-orange-400">
+              {hrReading.bpm}
+              <span className="text-lg text-slate-400 ml-1">bpm</span>
+            </span>
+          ) : (
+            <input
+              type="number"
+              inputMode="numeric"
+              min={30}
+              max={240}
+              value={manualBpm}
+              onChange={(e) => setManualBpm(e.target.value)}
+              placeholder="--"
+              aria-label="Heart rate in beats per minute (manual entry)"
+              className="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-3xl font-bold tabular-nums text-orange-400 text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          )}
+          <span
+            className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+              hrIsLive ? "bg-green-500/20 text-green-400" : "bg-slate-700 text-slate-400"
+            }`}
+          >
+            {hrIsLive ? "LIVE" : "MANUAL"}
+          </span>
         </div>
 
         {/* Big stat tiles */}
@@ -278,7 +342,9 @@ export default function TreadmillPage() {
 
         <p className="text-xs text-slate-500 mt-6 text-center">
           Speed &amp; incline are set to match your treadmill console — distance, pace, and calories update live from
-          those values. Calorie estimate uses the ACSM walking formula and is approximate.
+          those values. Calorie estimate uses the ACSM walking formula and is approximate. Heart rate shows live
+          when the Health Auto Export app on your phone is relaying Watch data to <code>/api/heartrate</code>;
+          otherwise enter it manually above.
         </p>
       </div>
     </div>
