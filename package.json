@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "setup": "npm install && prisma migrate deploy && prisma generate",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "app": "next build && next start"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

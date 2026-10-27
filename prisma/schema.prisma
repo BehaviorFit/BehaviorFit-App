@@ -68,3 +68,80 @@ model Biometrics {
   client   Client @relation(fields: [clientId], references: [id])
   clientId Int
 }
+
+// ─── Social media command center ────────────────────────────────────────────
+// platform is one of: "linkedin" | "instagram" | "facebook"
+// source is one of: "demo" | "api" | "csv" | "manual"
+
+// Connection settings for each platform (one row per platform)
+model SocialAccount {
+  id           Int       @id @default(autoincrement())
+  platform     String    @unique
+  name         String?   // Display name / handle
+  externalId   String?   // Facebook Page ID, or LinkedIn organization ID
+  accessToken  String?   // Stored locally in SQLite — never sent to the browser
+  lastSyncedAt DateTime?
+  lastError    String?
+  createdAt    DateTime  @default(now())
+}
+
+// One published post with its performance numbers
+model SocialPost {
+  id          Int      @id @default(autoincrement())
+  platform    String
+  externalId  String
+  text        String?
+  format      String   @default("post") // text, image, carousel, video, reel, story, link, document
+  permalink   String?
+  postedAt    DateTime
+  impressions Int      @default(0)
+  reach       Int      @default(0)
+  likes       Int      @default(0)
+  comments    Int      @default(0)
+  shares      Int      @default(0)
+  saves       Int      @default(0)
+  clicks      Int      @default(0)
+  source      String   @default("manual")
+  updatedAt   DateTime @updatedAt
+
+  @@unique([platform, externalId])
+}
+
+// DMs, comments, and mentions — the unified inbox
+model SocialMessage {
+  id         Int      @id @default(autoincrement())
+  platform   String
+  kind       String   @default("comment") // dm, comment, mention
+  externalId String
+  author     String?
+  text       String
+  permalink  String?
+  receivedAt DateTime
+  status     String   @default("new") // new, replied, done
+  category   String   @default("general") // lead, question, praise, spam, general
+  source     String   @default("manual")
+  updatedAt  DateTime @updatedAt
+
+  @@unique([platform, externalId])
+}
+
+// Daily follower counts, for growth trends
+model FollowerSnapshot {
+  id        Int      @id @default(autoincrement())
+  platform  String
+  date      DateTime // Midnight of the day the count was taken
+  followers Int
+  source    String   @default("manual")
+
+  @@unique([platform, date])
+}
+
+// Your own social to-dos
+model SocialTask {
+  id        Int       @id @default(autoincrement())
+  title     String
+  platform  String?
+  dueDate   DateTime?
+  done      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+}

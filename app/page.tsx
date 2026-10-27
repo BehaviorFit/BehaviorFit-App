@@ -13,6 +13,12 @@ export default function Home() {
       >
         Go to Clients
       </Link>
+      <Link
+        href="/social"
+        className="ml-3 border border-blue-700 text-blue-700 px-6 py-3 rounded-lg text-lg font-medium hover:bg-blue-50 transition"
+      >
+        Social Command Center
+      </Link>
     </div>
   );
 }
